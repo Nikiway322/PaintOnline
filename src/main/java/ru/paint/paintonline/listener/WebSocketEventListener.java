@@ -17,7 +17,5 @@ public class WebSocketEventListener {
     public void handleSessionDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = sha.getSessionId();
-        // Notify controller to remove that session's user and broadcast
-        canvasController.handleDisconnect(sessionId);
     }
 }

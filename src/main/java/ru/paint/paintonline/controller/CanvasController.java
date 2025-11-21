@@ -1,15 +1,14 @@
 package ru.paint.paintonline.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import ru.paint.paintonline.dto.ChatMessage;
-import ru.paint.paintonline.dto.DrawMessage;
-import ru.paint.paintonline.dto.UsersMessage;
+import ru.paint.paintonline.dto.Stroke;
+import ru.paint.paintonline.service.CanvasState;
 
 import java.util.List;
 import java.util.Map;
@@ -19,53 +18,91 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class CanvasController {
 
-    private final SimpMessagingTemplate messagingTemplate;
+    private final SimpMessagingTemplate messaging;
+    private final CanvasState canvasState;
 
-    // sessionId -> username
-    private final ConcurrentHashMap<String, String> sessionToUser = new ConcurrentHashMap<>();
+    // sessionId → username
+    private final ConcurrentHashMap<String, String> users = new ConcurrentHashMap<>();
 
-    // helper — update users topic
-    private void broadcastUsers() {
-        List<String> users = sessionToUser.values().stream().distinct().toList();
-        UsersMessage msg = new UsersMessage(users.size(), users);
-        messagingTemplate.convertAndSend("/topic/users", msg);
-    }
-
+    /**
+     * Когда пользователь подключается — сохраняем его имя
+     * и отправляем ему текущий холст.
+     */
     @MessageMapping("/join")
-    public void joinUser(@Payload Map<String, String> payload, Message<?> message) {
-        String user = payload.get("user");
-        if (user == null || user.trim().isEmpty()) return;
+    public void join(@Payload Map<String, String> payload,
+                     org.springframework.messaging.Message<?> message) {
 
-        String sessionId = SimpMessageHeaderAccessor.getSessionId(message.getHeaders());
-        if (sessionId != null) {
-            sessionToUser.put(sessionId, user);
-            broadcastUsers();
+        String username = payload.get("user");
+        String sessionId = (String) message.getHeaders().get("simpSessionId");
+
+        if (sessionId != null && username != null) {
+            users.put(sessionId, username);
         }
+
+        // отправляем текущий холст только этому пользователю
+        List<Stroke> allStrokes = canvasState.getAll();
+
+        messaging.convertAndSendToUser(
+                sessionId,
+                "/queue/init",
+                allStrokes
+        );
+
+        broadcastUserList();
     }
 
+    /**
+     * Когда пользователь отключается
+     */
     @MessageMapping("/leave")
-    public void leaveUser(@Payload Map<String, String> payload, Message<?> message) {
-        String sessionId = SimpMessageHeaderAccessor.getSessionId(message.getHeaders());
+    public void leave(org.springframework.messaging.Message<?> message) {
+        String sessionId = (String) message.getHeaders().get("simpSessionId");
+
         if (sessionId != null) {
-            sessionToUser.remove(sessionId);
-            broadcastUsers();
+            users.remove(sessionId);
+            broadcastUserList();
         }
     }
 
+    /**
+     * Чат
+     */
     @MessageMapping("/chat")
     public void chat(ChatMessage msg) {
-        messagingTemplate.convertAndSend("/topic/chat", msg);
+        messaging.convertAndSend("/topic/chat", msg);
     }
 
+    /**
+     * Обработка конкретного штриха
+     */
     @MessageMapping("/draw")
-    public void draw(DrawMessage msg) {
-        messagingTemplate.convertAndSend("/topic/draw", msg);
+    public void draw(@Payload Stroke stroke) {
+
+        // сохраняем в историю
+        canvasState.addStroke(stroke);
+
+        // трансляция всем
+        messaging.convertAndSend("/topic/draw", stroke);
     }
 
-    // Exposed for event listener when session disconnects
-    public void handleDisconnect(String sessionId) {
-        if (sessionId == null) return;
-        sessionToUser.remove(sessionId);
-        broadcastUsers();
+    /**
+     * Очистка холста
+     */
+    @MessageMapping("/clear")
+    public void clear() {
+        canvasState.clear();
+        messaging.convertAndSend("/topic/clear", "clear");
     }
+
+    /**
+     * Трансляция списка пользователей
+     */
+    private void broadcastUserList() {
+        var list = users.values().stream().distinct().toList();
+        messaging.convertAndSend("/topic/users", Map.of(
+                "count", list.size(),
+                "users", list
+        ));
+    }
+
 }

@@ -1,12 +1,302 @@
-html, body { height:100%; margin:0; font-family: Arial, sans-serif; }
-#app { display:flex; height:100vh; }
-#left { flex:1; position:relative; background:#f0f0f0; }
-canvas { width:100%; height:100%; display:block; background: white; }
-#toolbar { position:absolute; top:10px; left:10px; z-index:20; background:rgba(255,255,255,0.9); padding:8px; border-radius:6px; }
-#right { width:320px; border-left:1px solid #ddd; display:flex; flex-direction:column; background:#fff; }
-#users { padding:8px; border-bottom:1px solid #eee; background:#fff; }
-.chatBox { flex:1; padding:10px; overflow:auto; background:#fafafa; }
-.chatInputWrap { padding:10px; border-top:1px solid #eee; background:#fff; }
-#chatInput { width:100%; padding:8px; box-sizing:border-box; }
-#modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:50; }
-#modal .card { background:white; padding:20px; border-radius:8px; width:320px; box-shadow:0 6px 20px rgba(0,0,0,0.2); }
+/* ----------------- GLOBAL ----------------- */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: "Inter", Arial, sans-serif;
+    background: #0e1013;
+    overflow: hidden;
+}
+
+/* Контейнер */
+#app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* ----------------- CANVAS AREA ----------------- */
+#left {
+    flex: 1;
+    position: relative;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #ffffff;
+}
+
+/* ----------------- TOOLBAR ----------------- */
+#toolbar {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 20;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    background: rgba(255, 255, 255, 0.15);
+    padding: 10px 14px;
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.25);
+
+    box-shadow: 0 6px 25px rgba(0,0,0,0.25);
+}
+
+#toolbar input[type="color"] {
+    width: 35px;
+    height: 35px;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#toolbar button {
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    backdrop-filter: blur(8px);
+    transition: 0.2s;
+}
+
+#toolbar button:hover {
+    background: rgba(255,255,255,0.45);
+}
+
+/* ----------------- RIGHT PANEL (CHAT) ----------------- */
+#right {
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    background: rgba(20, 22, 27, 0.7);
+    backdrop-filter: blur(12px);
+}
+
+#users {
+    padding: 12px;
+    color: white;
+    font-size: 15px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.chatBox {
+    flex: 1;
+    padding: 14px;
+    overflow-y: auto;
+    color: #e8e8e8;
+    font-size: 14px;
+}
+
+.chatBox div {
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+}
+
+.chatInputWrap {
+    padding: 12px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+#chatInput {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    font-size: 15px;
+}
+
+/* ----------------- MODAL LOGIN ----------------- */
+#modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 999;
+}
+
+#modal .card {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(15px);
+    padding: 30px;
+    border-radius: 16px;
+    width: 320px;
+    color: white;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.3);
+
+    animation: fadeIn 0.3s ease;
+}
+
+#modal input {
+    width: 90%;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.35);
+}
+
+#connectBtn {
+    margin-top: 15px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(255,255,255,0.35);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#connectBtn:hover {
+    background: rgba(255,255,255,0.55);
+}
+
+/* ----------------- MOBILE ADAPTATION ----------------- */
+
+@media (max-width: 900px) {
+    #right {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 100%;
+        width: 80%;
+        transform: translateX(100%);
+        transition: transform 0.4s ease;
+        z-index: 50;
+    }
+
+    /* кнопка открытия чата */
+    #chatToggleBtn {
+        position: absolute;
+        right: 15px;
+        bottom: 15px;
+
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+
+        background: rgba(255,255,255,0.7);
+        backdrop-filter: blur(10px);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 30px;
+        font-weight: bold;
+        color: #222;
+
+        z-index: 40;
+    }
+
+    /* тулбар переносим вниз */
+    #toolbar {
+        bottom: 15px;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+
+/* ----------------- ANIMATIONS ----------------- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+/* ---------- CHAT HEADER ---------- */
+#chatHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    font-size: 16px;
+}
+
+#chatCloseBtn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+    transition: 0.2s;
+}
+
+#chatCloseBtn:hover {
+    background: rgba(255,255,255,0.35);
+}
+
+/* ---------- SEND BUTTON ---------- */
+.chatInputWrap {
+    display: flex;
+    gap: 8px;
+}
+
+#sendMsgBtn {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 22px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#sendMsgBtn:hover {
+    background: rgba(255,255,255,0.5);
+}
+
+/* ---------- BRUSH SIZE SLIDER ---------- */
+
+.sizeLabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    font-size: 14px;
+}
+
+#brushSize {
+    width: 100px;
+    accent-color: #ffffff;
+}
+
+/* Скрыто по умолчанию */
+.mobileOnly {
+    display: none;
+}
+
+/* Только на мобильных показываем */
+@media (max-width: 900px) {
+    .mobileOnly {
+        display: inline-flex;
+    }
+}
